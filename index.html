@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기타 코드 연주 앱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #guitarWrapper {
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #guitarImage {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .chord-button {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-sizing: border-box;
+            background: transparent;
+            border: none;
+        }
+
+        .chord-button:hover {
+            background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 40%, rgba(255, 255, 255, 0.05) 70%, transparent 100%);
+        }
+
+        .chord-button:active {
+            background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 255, 255, 0.1) 70%, transparent 100%);
+        }
+
+        .chord-button.playing {
+            background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 255, 255, 0.1) 70%, transparent 100%);
+        }
+
+        .chord-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            display: none;
+        }
+
+        #fullscreenBtn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        #fullscreenBtn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        #fullscreenBtn svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="guitarWrapper">
+            <img id="guitarImage" src="guitar.jpg" alt="기타 지판">
+            
+            <!-- 코드 버튼들 - 위쪽 -->
+            <div class="chord-button" data-chord="C" style="left: 12%; top: 31%; width: 8.5%; height: 59.95%;">
+                <span class="chord-label">C</span>
+            </div>
+
+            <div class="chord-button" data-chord="Dm" style="left: 21.62%; top: 31%; width: 8.5%; height: 59.95%;">
+                <span class="chord-label">Dm</span>
+            </div>
+
+            <div class="chord-button" data-chord="D" style="left: 31.24%; top: 31%; width: 8.5%; height: 59.95%;">
+                <span class="chord-label">D</span>
+            </div>
+
+            <div class="chord-button" data-chord="Em" style="left: 40.86%; top: 31%; width: 8.5%; height: 59.95%;">
+                <span class="chord-label">Em</span>
+            </div>
+
+            <div class="chord-button" data-chord="E" style="left: 50.48%; top: 31%; width: 8.5%; height: 59.95%;">
+                <span class="chord-label">E</span>
+            </div>
+
+            <div class="chord-button" data-chord="G" style="left: 60.1%; top: 31%; width: 8.5%; height: 59.95%;">
+                <span class="chord-label">G</span>
+            </div>
+
+            <div class="chord-button" data-chord="Am" style="left: 69.72%; top: 31%; width: 8.5%; height: 59.95%;">
+                <span class="chord-label">Am</span>
+            </div>
+
+            <div class="chord-button" data-chord="A" style="left: 79.34%; top: 31%; width: 8.5%; height: 59.95%;">
+                <span class="chord-label">A</span>
+            </div>
+        </div>
+
+        <!-- 전체화면 버튼 -->
+        <button id="fullscreenBtn" title="전체화면">
+            <svg viewBox="0 0 24 24">
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        // 오디오 파일 경로 설정
+        const audioFiles = {
+            'C': 'sounds/c.wav',
+            'Dm': 'sounds/dm.wav',
+            'D': 'sounds/d.wav',
+            'Em': 'sounds/em.wav',
+            'E': 'sounds/e.wav',
+            'G': 'sounds/g.wav',
+            'Am': 'sounds/am.wav',
+            'A': 'sounds/a.wav'
+        };
+
+        // 오디오 객체들을 미리 로드
+        const audioElements = {};
+        Object.keys(audioFiles).forEach(chord => {
+            audioElements[chord] = new Audio(audioFiles[chord]);
+            audioElements[chord].preload = 'auto';
+        });
+
+        // 현재 재생 중인 오디오
+        let currentAudio = null;
+
+        // 코드 재생 함수
+        function playChord(chordName) {
+            // 이전 소리 정지
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+
+            // 새로운 오디오 재생
+            const audio = audioElements[chordName];
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(err => {
+                    console.log('오디오 재생 오류:', err);
+                });
+                currentAudio = audio;
+            }
+        }
+
+        // 코드 버튼 이벤트 리스너
+        const chordButtons = document.querySelectorAll('.chord-button');
+        
+        chordButtons.forEach(button => {
+            const playChordHandler = () => {
+                const chord = button.getAttribute('data-chord');
+                playChord(chord);
+                
+                // 시각적 피드백
+                button.classList.add('playing');
+                setTimeout(() => {
+                    button.classList.remove('playing');
+                }, 300);
+            };
+
+            // 마우스 이벤트
+            button.addEventListener('mousedown', playChordHandler);
+            
+            // 터치 이벤트
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                playChordHandler();
+            });
+        });
+
+        // 전체화면 토글
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log('전체화면 오류:', err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // 전체화면 상태 변경시 아이콘 업데이트
+        document.addEventListener('fullscreenchange', () => {
+            const icon = fullscreenBtn.querySelector('svg path');
+            if (document.fullscreenElement) {
+                icon.setAttribute('d', 'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z');
+            } else {
+                icon.setAttribute('d', 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z');
+            }
+        });
+
+        // 16:9 비율 유지하며 최대 크기로 조정
+        function resizeGuitar() {
+            const container = document.getElementById('container');
+            const wrapper = document.getElementById('guitarWrapper');
+            
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            const aspectRatio = 16 / 9;
+
+            let width, height;
+
+            if (containerWidth / containerHeight > aspectRatio) {
+                // 높이 기준
+                height = containerHeight;
+                width = height * aspectRatio;
+            } else {
+                // 너비 기준
+                width = containerWidth;
+                height = width / aspectRatio;
+            }
+
+            wrapper.style.width = `${width}px`;
+            wrapper.style.height = `${height}px`;
+        }
+
+        // 초기 리사이즈 및 이벤트 리스너
+        window.addEventListener('load', resizeGuitar);
+        window.addEventListener('resize', resizeGuitar);
+
+        // 모바일 터치 개선
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
